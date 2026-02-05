@@ -102,12 +102,13 @@ java -cp src Main
 ```
 aws3_map_reduce_learning/
 ├── src/
-│   ├── Node.java           # Node data structure
-│   ├── PorterStemmer.java  # Stemming utility
-│   ├── PathExtractor.java # Main extraction logic
-│   └── Main.java          # Test suite
-├── .gitignore             # Git ignore file
-└── README.md             # This file
+│   ├── Node.java, PorterStemmer.java, PathExtractor.java, Main.java  # Step 1 (extraction)
+│   ├── Step2_CalcMI.java, Step2_PathTotals.java  # Step 2 (MI + path totals)
+│   ├── Step3_Similarity.java, Step4_FinalSum.java # Steps 3–4 (similarity)
+│   └── ...
+├── pom.xml
+├── .gitignore
+└── README.md
 ```
 
 ## Key Features
@@ -120,12 +121,88 @@ aws3_map_reduce_learning/
 - ✅ Comprehensive test suite
 - ✅ Clean, documented code with Javadoc headers
 
+---
+
+## MapReduce Pipeline (Steps 2–4): MI and Lin Similarity
+
+**Assumption:** Step 1 output is `((Path, Slot, Word), Count)` — text lines: `Path \t Slot \t Word \t Count`.
+
+### Step 2: MI Calculation (`Step2_CalcMI.java`)
+
+- **Input:** Step 1 output (Path, Slot, Word, Count).
+- **Two-phase:**
+  1. **Marginals:** Aggregates `count(p,s)`, `count(s,w)`, and `|Total|`.
+  2. **MI:** Loads marginals from distributed cache and computes  
+     `MI(p,s,w) = log( (count(p,s,w) * |Total|) / (count(p,s) * count(s,w)) )`.
+- **Output:** `Path \t Slot \t Word \t MI`.
+
+```bash
+# Run (e.g. on Hadoop or local runner)
+hadoop jar ... Step2_CalcMI <input_triples> <marginals_dir> <mi_output_dir>
+```
+
+### Step 2b: Path Totals (`Step2_PathTotals.java`) — optional, for Lin normalization
+
+- **Input:** Step 2 MI output.
+- **Output:** `Path \t TotalMI` (sum of MI over all (Slot, Word) for that Path).
+- Use this file as the third argument to Step 4 for normalized Lin similarity.
+
+### Step 3: Similarity via Inverted Index (`Step3_Similarity.java`)
+
+- **Mapper:** Input `(Path, Slot, Word, MI)`. Key = **Feature** `(Slot, Word)`, Value = `(Path, MI)`.
+- **Reducer:** For each feature, gets list of `[(PathA, MI_A), (PathB, MI_B), ...]`. Emits all unordered pairs `(PathA, PathB)` with **partial score** `MI_A + MI_B` (numerator term for Lin).
+- **Output:** `PathA \t PathB \t PartialScore`.
+
+```bash
+hadoop jar ... Step3_Similarity <step2_mi_output> <step3_output>
+```
+
+### Step 4: Summing Scores (`Step4_FinalSum.java`)
+
+- **Mapper:** Identity: `(PathA, PathB, PartialScore)` → key `(PathA, PathB)`, value `PartialScore`.
+- **Reducer:** Sums partial scores for each `(PathA, PathB)`. Optionally divides by `(TotalMI_A + TotalMI_B)` if path totals file is provided (Lin’s full similarity).
+- **Output:** `PathA \t PathB \t SimilarityScore` (e.g. `X control Y \t X prevent Y \t 0.1566`).
+
+```bash
+# Raw numerator sum only:
+hadoop jar ... Step4_FinalSum <step3_output> <final_output>
+
+# Normalized Lin similarity (pass path totals from Step2_PathTotals):
+hadoop jar ... Step4_FinalSum <step3_output> <final_output> <path_totals_file>
+```
+
+### Build (Maven)
+
+```bash
+mvn compile package
+# Use target/aws3-map-reduce-learning-1.0-SNAPSHOT.jar on your Hadoop cluster
+```
+
+### Project Structure (updated)
+
+```
+aws3_map_reduce_learning/
+├── src/
+│   ├── Node.java            # Node data structure
+│   ├── PorterStemmer.java   # Stemming utility
+│   ├── PathExtractor.java   # Extraction logic (Step 1)
+│   ├── Main.java            # Extraction test suite
+│   ├── Step2_CalcMI.java    # MI calculation (two-phase)
+│   ├── Step2_PathTotals.java # Path totals for Lin denominator
+│   ├── Step3_Similarity.java # Inverted-index similarity (pairs + partial scores)
+│   └── Step4_FinalSum.java  # Sum partial scores; optional Lin normalization
+├── pom.xml
+├── .gitignore
+└── README.md
+```
+
+---
+
 ## Next Steps
 
-This implementation covers the **Extraction Phase**. Future phases might include:
+This implementation covers the **Extraction Phase** and the **MapReduce pipeline** for MI and Lin similarity. Possible extensions:
 - Pattern matching and generalization
-- Scoring and ranking of extracted patterns
-- Integration with larger DIRT pipeline
+- Integration with a full DIRT pipeline
 
 ## Notes
 
