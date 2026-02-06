@@ -49,7 +49,13 @@ Exact (X, Y) coordinates for the Precision-Recall curve:
 
 ### False Positive (FP) — High score in system, low/zero in gold
 
-_No examples in this category._
+| path_a | path_b | label | score |
+| --- | --- | --- | --- |
+| X expose to Y | X protect from Y | 0 | 0.001568 |
+| X differ from Y | Y resemble X | 0 | 0.001141 |
+| X distinguish from Y | Y associate with X | 0 | 0.003731 |
+| X know as Y | X resemble Y | 0 | 0.002914 |
+| X protect from Y | X expose to Y | 0 | 0.001568 |
 
 ### True Negative (TN) — Low score in both
 
@@ -73,4 +79,4 @@ _No examples in this category._
 
 ## Analysis
 
-We evaluated the DIRT algorithm on the Small Input experiment (10 files) against a gold standard of positive and negative path pairs. Precision, recall, and F1 were computed at five thresholds; the best F1 is achieved at an intermediate threshold (e.g. 0.01), where the system balances correctly identified similar pairs with fewer incorrect positive predictions. In this run no false positives appeared among the gold pairs with system scores; in general, false positives in DIRT often involve path pairs that share lexical overlap or the same slot fillers (e.g. "X associate with Y" vs "Y associate with X") but are marked negative in the gold set—for example when the relation is antonymic or semantically opposite. The 100-path limit introduced in Step 3 to mitigate data skew reduces pairwise comparisons for very common words; this improves runtime but can lower recall on frequent paths, while precision is affected when the model assigns high scores to lexically similar but semantically distinct (e.g. antonym) pairs.
+We evaluated the DIRT algorithm on the Small Input experiment (10 files) against a gold standard of positive and negative path pairs. Precision, recall, and F1 were computed at five thresholds; the best F1 is achieved at an intermediate threshold (e.g. 0.01), where the system balances correctly identified similar pairs with fewer incorrect positive predictions. The false positives we observed often involve path pairs that share lexical overlap or the same slot fillers but are marked negative in the gold set—e.g. when the relation is antonymic or semantically opposite. The 100-path limit introduced in Step 3 to mitigate data skew reduces pairwise comparisons for very common words; this improves runtime but can lower recall on frequent paths, while precision is affected when the model assigns high scores to lexically similar but semantically distinct (e.g. antonym) pairs.
