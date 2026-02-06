@@ -62,11 +62,19 @@ public class Node {
 
     /**
      * Checks if this node is a noun (POS tag starts with "NN").
-     * 
-     * @return true if the node is a noun
      */
     public boolean isNoun() {
         return posTag != null && posTag.startsWith("NN");
+    }
+
+    /**
+     * Checks if this node can act as a slot filler (noun, determiner, pronoun) for path extraction.
+     * Relaxed to allow DT, PRP, etc. in addition to NN.
+     */
+    public boolean isNounOrFiller() {
+        if (posTag == null) return false;
+        String p = posTag.toUpperCase();
+        return p.startsWith("NN") || p.startsWith("DT") || p.startsWith("PRP") || p.equals("WP") || p.equals("WP$");
     }
 
     /**

@@ -100,9 +100,20 @@ public class Step1_Counting {
      * emits (TripleKey(path, slot, word), 1) for each path.
      */
     public static class PathCountMapper extends Mapper<LongWritable, Text, TripleKey, IntWritable> {
+        private boolean firstFailureLogged = false;
+
         @Override
         protected void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
-            for (MapEntry e : runMapLogic(value.toString())) {
+            String line = value.toString();
+            List<MapEntry> entries = runMapLogic(line);
+            if (entries.isEmpty()) {
+                if (!firstFailureLogged) {
+                    System.err.println("[Step1_Counting] First line with no emitted paths (sample): " + (line.length() > 200 ? line.substring(0, 200) + "..." : line));
+                    firstFailureLogged = true;
+                }
+                return;
+            }
+            for (MapEntry e : entries) {
                 context.write(e.key, ONE);
             }
         }

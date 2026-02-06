@@ -67,6 +67,7 @@ public class Step2_PathTotals {
         job.setOutputFormatClass(TextOutputFormat.class);
         TextInputFormat.addInputPath(job, inputPath);
         TextOutputFormat.setOutputPath(job, outputPath);
+        job.setNumReduceTasks(1);  // single file for Step 4 distributed cache
         return job;
     }
 

@@ -10,7 +10,9 @@
  */
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -25,6 +27,62 @@ import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 public class Step3_Similarity {
 
     public static final String SEP = "\t";
+
+    /** (Path, MI) for local logic. */
+    public static final class PathMI {
+        public final String path;
+        public final double mi;
+        public PathMI(String path, double mi) { this.path = path; this.mi = mi; }
+    }
+
+    /** One (Path, Slot, Word, MI) row from Step 2 output. */
+    public static final class PathSlotWordMI {
+        public final String path, slot, word;
+        public final double mi;
+        public PathSlotWordMI(String path, String slot, String word, double mi) {
+            this.path = path; this.slot = slot; this.word = word; this.mi = mi;
+        }
+    }
+
+    /**
+     * Map logic: from (path, slot, word, mi) produce feature key = (slot, word) and value = (path, mi).
+     * Returns map: featureKey (slot + "\t" + word) -> list of PathMI.
+     */
+    public static Map<String, List<PathMI>> runInvertedIndexMap(List<PathSlotWordMI> rows) {
+        Map<String, List<PathMI>> featureToPathMI = new LinkedHashMap<>();
+        for (PathSlotWordMI r : rows) {
+            String feature = r.slot + SEP + r.word;
+            featureToPathMI.computeIfAbsent(feature, k -> new ArrayList<>()).add(new PathMI(r.path, r.mi));
+        }
+        return featureToPathMI;
+    }
+
+    /**
+     * Reduce logic: for one feature and list of (Path, MI), emit (pathA, pathB) -> (MI_A + MI_B) for each pair.
+     * Returns list of (pathPairKey, partialScore) with canonical path order.
+     */
+    public static List<Pair<String, Double>> runPairEmitReduce(String feature, List<PathMI> pathMIList) {
+        List<Pair<String, Double>> out = new ArrayList<>();
+        if (pathMIList == null || pathMIList.size() < 2) return out;
+        for (int i = 0; i < pathMIList.size(); i++) {
+            for (int j = i + 1; j < pathMIList.size(); j++) {
+                PathMI a = pathMIList.get(i);
+                PathMI b = pathMIList.get(j);
+                if (a.path.equals(b.path)) continue;
+                String first = a.path.compareTo(b.path) <= 0 ? a.path : b.path;
+                String second = a.path.compareTo(b.path) <= 0 ? b.path : a.path;
+                out.add(new Pair<>(first + SEP + second, a.mi + b.mi));
+            }
+        }
+        return out;
+    }
+
+    /** Simple (key, value) pair for local test. */
+    public static final class Pair<K, V> {
+        public final K first;
+        public final V second;
+        public Pair(K first, V second) { this.first = first; this.second = second; }
+    }
 
     /**
      * Mapper: Input (Path, Slot, Word, MI).
@@ -102,12 +160,6 @@ public class Step3_Similarity {
                     context.write(pathPairKey, partialScore);
                 }
             }
-        }
-
-        private static class PathMI {
-            final String path;
-            final double mi;
-            PathMI(String path, double mi) { this.path = path; this.mi = mi; }
         }
     }
 

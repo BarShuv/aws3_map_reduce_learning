@@ -30,6 +30,29 @@ public class Step4_FinalSum {
     public static final String PATH_TOTALS_FILE = "dirt.path.totals.file";
 
     /**
+     * Sum partial scores for one (PathA, PathB). If pathTotals is non-null, normalizes by Lin denominator.
+     * Returns numerator sum, or similarity = sum / (totalA + totalB) when pathTotals provided.
+     */
+    public static double runSumReduce(String pathPairKey, Iterable<Double> partialScores, Map<String, Double> pathTotals) {
+        double sum = 0;
+        for (Double d : partialScores) sum += d;
+        if (pathTotals != null && !pathTotals.isEmpty()) {
+            int idx = pathPairKey.indexOf(SEP);
+            if (idx > 0) {
+                String pathA = pathPairKey.substring(0, idx);
+                String pathB = pathPairKey.substring(idx + 1);
+                Double tA = pathTotals.get(pathA);
+                Double tB = pathTotals.get(pathB);
+                if (tA != null && tB != null) {
+                    double denom = tA + tB;
+                    if (denom > 0) sum = sum / denom;
+                }
+            }
+        }
+        return sum;
+    }
+
+    /**
      * Pass-through: (PathA, PathB, PartialScore) -> same key (PathA, PathB), value = PartialScore.
      */
     public static class SumMapper extends Mapper<Object, Text, Text, DoubleWritable> {

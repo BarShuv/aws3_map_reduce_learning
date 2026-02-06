@@ -49,3 +49,8 @@ Desktop.ini
 target/
 build/
 
+# Local env / credentials (do not commit)
+.env
+.env.*
+*credentials*
+

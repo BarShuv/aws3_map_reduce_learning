@@ -15,6 +15,7 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
@@ -34,6 +35,63 @@ public class Step2_CalcMI {
     public static final String PREFIX_PS = "PS:";
     public static final String PREFIX_SW = "SW:";
     public static final String PREFIX_TOTAL = "TOTAL";
+
+    /** One triple with count: (Path, Slot, Word) -> Count. */
+    public static final class TripleCount {
+        public final String path, slot, word;
+        public final long count;
+        public TripleCount(String path, String slot, String word, long count) {
+            this.path = path; this.slot = slot; this.word = word; this.count = count;
+        }
+    }
+
+    /** Marginals: count(p,s), count(s,w), and |Total|. */
+    public static final class Marginals {
+        public final Map<String, Long> countPS;
+        public final Map<String, Long> countSW;
+        public final long total;
+        public Marginals(Map<String, Long> countPS, Map<String, Long> countSW, long total) {
+            this.countPS = countPS; this.countSW = countSW; this.total = total;
+        }
+    }
+
+    /**
+     * Compute marginals from a list of (path, slot, word, count) triples.
+     * Same logic as MarginalsMapper + MarginalsReducer.
+     */
+    public static Marginals computeMarginalsFromTriples(List<TripleCount> triples) {
+        Map<String, Long> countPS = new HashMap<>();
+        Map<String, Long> countSW = new HashMap<>();
+        long total = 0;
+        for (TripleCount t : triples) {
+            long c = t.count;
+            countPS.merge(t.path + SEP + t.slot, c, Long::sum);
+            countSW.merge(t.slot + SEP + t.word, c, Long::sum);
+            total += c;
+        }
+        return new Marginals(countPS, countSW, total);
+    }
+
+    /**
+     * Calculate MI(p,s,w) = log( (count(p,s,w) * total) / (count(p,s) * count(s,w)) ).
+     * Returns Double.NaN if any denominator is missing or zero.
+     */
+    public static double calculateMI(long countPSW, long countPS, long countSW, long total) {
+        if (total <= 0 || countPS <= 0 || countSW <= 0) return Double.NaN;
+        double ratio = (double) (countPSW * total) / (double) (countPS * countSW);
+        if (ratio <= 0) return Double.NaN;
+        return Math.log(ratio);
+    }
+
+    /**
+     * Compute MI for one triple using precomputed marginals. Returns Double.NaN if not computable.
+     */
+    public static double calculateMIForTriple(TripleCount t, Marginals m) {
+        Long ps = m.countPS.get(t.path + SEP + t.slot);
+        Long sw = m.countSW.get(t.slot + SEP + t.word);
+        if (ps == null || sw == null) return Double.NaN;
+        return calculateMI(t.count, ps, sw, m.total);
+    }
 
     // ---------- Phase 1: Compute marginals ----------
 

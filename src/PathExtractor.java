@@ -26,46 +26,54 @@ public class PathExtractor {
      * @param line the input line to parse
      * @return a list of Node objects representing the dependency parse
      */
+    /** Delimiter for splitting line into tokens (Biarcs: TAB). */
+    private static final String LINE_DELIM = "\t";
+
+    /**
+     * Parse a Biarcs line: top-level fields are TAB-separated; the syntactic parse
+     * field may contain SPACE-separated word/POS/dep/head tokens. Trailing numeric
+     * fields (e.g. frequency) are skipped.
+     */
     public List<Node> parseLine(String line) {
         List<Node> nodes = new ArrayList<>();
-        
         if (line == null || line.trim().isEmpty()) {
             return nodes;
         }
-        
-        // Split by tabs to get individual tokens
-        String[] tokens = line.trim().split("\t+");
-        
-        // The last token might be a frequency count, so we'll ignore it if it's numeric
-        int endIndex = tokens.length;
-        if (tokens.length > 0 && tokens[tokens.length - 1].matches("\\d+")) {
-            endIndex = tokens.length - 1;
-        }
-        
-        for (int i = 0; i < endIndex; i++) {
-            String token = tokens[i].trim();
-            if (token.isEmpty()) {
-                continue;
+
+        // Top-level: split by TAB (e.g. "be", "death/NN/... be/VB/... for/IN/... those/DT/...", "23", "1834,2")
+        String[] segments = line.trim().split(LINE_DELIM + "+");
+        List<String> tokens = new ArrayList<>();
+        for (String seg : segments) {
+            seg = seg.trim();
+            if (seg.isEmpty()) continue;
+            // Skip trailing purely numeric segments (frequency, etc.)
+            if (seg.matches("\\d+") || seg.matches("[\\d,]+\\.?\\d*")) continue;
+            // Within a segment, tokens may be space-separated (word/POS/dep/head)
+            for (String piece : seg.split("\\s+")) {
+                piece = piece.trim();
+                if (!piece.isEmpty()) tokens.add(piece);
             }
-            
-            // Split by '/' to get word, POS tag, dependency label, and head index
-            String[] parts = token.split("/");
-            if (parts.length >= 4) {
+        }
+
+        int index = 0;
+        for (String token : tokens) {
+            if (!token.contains("/")) continue;
+            String[] parts = token.split("/", -1);
+            if (parts.length >= 3) {
                 try {
                     String word = parts[0];
                     String posTag = parts[1];
                     String dependencyLabel = parts[2];
-                    int headIndex = Integer.parseInt(parts[3]);
-                    
-                    Node node = new Node(word, posTag, dependencyLabel, headIndex, i);
+                    int headIndex = (parts.length >= 4 && !parts[3].trim().isEmpty())
+                        ? Integer.parseInt(parts[3].trim()) : 0;
+                    Node node = new Node(word, posTag, dependencyLabel, headIndex, index);
                     nodes.add(node);
+                    index++;
                 } catch (NumberFormatException e) {
-                    // Skip malformed tokens
-                    System.err.println("Warning: Could not parse token: " + token);
+                    // skip
                 }
             }
         }
-        
         return nodes;
     }
 
@@ -152,30 +160,22 @@ public class PathExtractor {
         // Build a map of head index to children for efficient lookup
         Map<Integer, List<Node>> childMap = buildChildMap(nodes);
         
-        // Find all head verbs (verbs that are not auxiliary)
+        // Find all head verbs (include root/ccomp even if auxiliary, e.g. "be")
         for (Node node : nodes) {
-            if (node.isVerb() && !node.isAuxiliaryVerb()) {
-                // Check if this verb has children
-                List<Node> children = childMap.get(node.getIndex());
-                if (children != null) {
-                    // Look for noun children
-                    for (Node child : children) {
-                        // Case A: Direct verb -> noun
-                        if (child.isNoun()) {
-                            String path = formatPath(node, child, null);
-                            paths.add(path);
-                        }
-                        // Case B: Verb -> preposition -> noun
-                        else if (child.isPreposition()) {
-                            // Check if the preposition has noun children
-                            List<Node> prepChildren = childMap.get(child.getIndex());
-                            if (prepChildren != null) {
-                                for (Node nounChild : prepChildren) {
-                                    if (nounChild.isNoun()) {
-                                        String path = formatPath(node, nounChild, child);
-                                        paths.add(path);
-                                    }
-                                }
+            boolean isRoot = "ROOT".equals(node.getDependencyLabel()) || "ccomp".equals(node.getDependencyLabel());
+            boolean useVerb = node.isVerb() && (!node.isAuxiliaryVerb() || isRoot);
+            if (!useVerb) continue;
+            List<Node> children = childMap.get(node.getIndex());
+            if (children == null) continue;
+            for (Node child : children) {
+                if (child.isNounOrFiller()) {
+                    paths.add(formatPath(node, child, null));
+                } else if (child.isPreposition()) {
+                    List<Node> prepChildren = childMap.get(child.getIndex());
+                    if (prepChildren != null) {
+                        for (Node nounChild : prepChildren) {
+                            if (nounChild.isNounOrFiller()) {
+                                paths.add(formatPath(node, nounChild, child));
                             }
                         }
                     }

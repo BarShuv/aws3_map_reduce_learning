@@ -1,0 +1,64 @@
+[
+  {
+    "Name": "Step1_Counting",
+    "ActionOnFailure": "CONTINUE",
+    "Type": "CUSTOM_JAR",
+    "Jar": "command-runner.jar",
+    "Args": [
+      "hadoop", "jar", "s3://meni-biarcs-data/jars/dirt-algorithm.jar",
+      "Step1_Counting",
+      "s3://meni-biarcs-data/",
+      "s3://meni-biarcs-data/output/step1"
+    ]
+  },
+  {
+    "Name": "Step2_CalcMI",
+    "ActionOnFailure": "CONTINUE",
+    "Type": "CUSTOM_JAR",
+    "Jar": "command-runner.jar",
+    "Args": [
+      "hadoop", "jar", "s3://meni-biarcs-data/jars/dirt-algorithm.jar",
+      "Step2_CalcMI",
+      "s3://meni-biarcs-data/output/step1",
+      "s3://meni-biarcs-data/output/marginals",
+      "s3://meni-biarcs-data/output/step2_mi"
+    ]
+  },
+  {
+    "Name": "Step2_PathTotals",
+    "ActionOnFailure": "CONTINUE",
+    "Type": "CUSTOM_JAR",
+    "Jar": "command-runner.jar",
+    "Args": [
+      "hadoop", "jar", "s3://meni-biarcs-data/jars/dirt-algorithm.jar",
+      "Step2_PathTotals",
+      "s3://meni-biarcs-data/output/step2_mi",
+      "s3://meni-biarcs-data/output/path_totals"
+    ]
+  },
+  {
+    "Name": "Step3_Similarity",
+    "ActionOnFailure": "CONTINUE",
+    "Type": "CUSTOM_JAR",
+    "Jar": "command-runner.jar",
+    "Args": [
+      "hadoop", "jar", "s3://meni-biarcs-data/jars/dirt-algorithm.jar",
+      "Step3_Similarity",
+      "s3://meni-biarcs-data/output/step2_mi",
+      "s3://meni-biarcs-data/output/step3_pairs"
+    ]
+  },
+  {
+    "Name": "Step4_FinalSum",
+    "ActionOnFailure": "CONTINUE",
+    "Type": "CUSTOM_JAR",
+    "Jar": "command-runner.jar",
+    "Args": [
+      "hadoop", "jar", "s3://meni-biarcs-data/jars/dirt-algorithm.jar",
+      "Step4_FinalSum",
+      "s3://meni-biarcs-data/output/step3_pairs",
+      "s3://meni-biarcs-data/output/final_result",
+      "s3://meni-biarcs-data/output/path_totals/part-r-00000"
+    ]
+  }
+]
