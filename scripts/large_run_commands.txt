@@ -1,0 +1,14 @@
+Step 1:
+step1 s3://meni-biarcs-data/biarcs-large/ s3://meni-biarcs-data/output_large/step1
+
+Step 2 (MI):
+step2 s3://meni-biarcs-data/output_large/step1 s3://meni-biarcs-data/output_large/marginals s3://meni-biarcs-data/output_large/step2_mi
+
+Step 2b (Path Totals):
+step2b s3://meni-biarcs-data/output_large/step2_mi s3://meni-biarcs-data/output_large/step2_path_totals
+
+Step 3 (Pairs):
+step3 s3://meni-biarcs-data/output_large/step2_mi s3://meni-biarcs-data/output_large/step3_pairs
+
+Step 4 (Final):
+step4 s3://meni-biarcs-data/output_large/step3_pairs s3://meni-biarcs-data/output_large/step4_final s3://meni-biarcs-data/output_large/step2_path_totals/part-r-00000
