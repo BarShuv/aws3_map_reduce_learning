@@ -35,6 +35,8 @@ Exact (X, Y) coordinates for the Precision-Recall curve:
 - (0.0125, 1.0000)
 - (0.0004, 1.0000)
 
+![Precision-Recall Curve Small](pr_curve_small.png)
+
 ## Error Analysis (5×4)
 
 ### True Positive (TP) — High score in system and in gold
