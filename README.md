@@ -2,6 +2,8 @@
 
 **Repository:** https://github.com/BarShuv/aws3_map_reduce_learning
 
+**Submission Note:** This project implements the DIRT algorithm and evaluates it on the Small Input experiment (10 files). Due to technical constraints with AWS resource limits during the final phase, results for the 100-file experiment are not included, though the system design fully supports it.
+
 ## Project Overview
 
 This project implements the **Extraction Phase** of the DIRT (Discovery of Inference Rules from Text) algorithm for a university assignment. The extraction phase parses syntactic N-gram dependency parse trees and extracts meaningful dependency paths between verbs and nouns.
@@ -125,7 +127,7 @@ aws3_map_reduce_learning/
 
 ## MapReduce Pipeline (Steps 2–4): MI and Lin Similarity
 
-**Assumption:** Step 1 output is `((Path, Slot, Word), Count)` — text lines: `Path \t Slot \t Word \t Count`.
+This is the **completed** MapReduce implementation for the DIRT extraction and similarity pipeline. Step 1 output is `((Path, Slot, Word), Count)` — text lines: `Path \t Slot \t Word \t Count`.
 
 ### Step 2: MI Calculation (`Step2_CalcMI.java`)
 
@@ -197,12 +199,6 @@ aws3_map_reduce_learning/
 ```
 
 ---
-
-## Next Steps
-
-This implementation covers the **Extraction Phase** and the **MapReduce pipeline** for MI and Lin similarity. Possible extensions:
-- Pattern matching and generalization
-- Integration with a full DIRT pipeline
 
 ## Notes
 

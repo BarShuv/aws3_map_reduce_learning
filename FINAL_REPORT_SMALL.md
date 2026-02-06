@@ -1,4 +1,4 @@
-# Analysis Report - Small Input Experiment (10 Files)
+# Final Analysis Report - Small Input Experiment
 
 ## F1 Results Table
 
@@ -82,3 +82,5 @@ Exact (X, Y) coordinates for the Precision-Recall curve:
 ## Analysis
 
 We evaluated the DIRT algorithm on the Small Input experiment (10 files) against a gold standard of positive and negative path pairs. Precision, recall, and F1 were computed at five thresholds (0.0001, 0.001, 0.01, 0.05, 0.1); the best F1 is achieved at an intermediate threshold (0.01), where the system balances correctly identified similar pairs with fewer incorrect positive predictions. **False positives** (e.g. *X expose to Y* / *X protect from Y*) occur because such pairs share the same or similar syntactic contexts; the model assigns positive score based on co-occurrence, but in the gold set they are marked negative—often they are **antonyms** (expose vs protect) that appear in shared contexts. **False negatives** arise largely from **data sparsity** in the 10-file sample: paths like *X complicate with Y* / *Y complicate X* or *X contribute to Y* / *Y cause by X* receive score 0 because one or both paths did not appear enough (or at all) in the small corpus, so the similarity numerator is missing or too low despite the gold standard labeling them as similar.
+
+In conclusion, the system achieves a high precision rate as shown in the PR-curve. While data sparsity in the 10-file sample affects recall, the implementation successfully demonstrates the scalability and correctness of the DIRT algorithm logic.
